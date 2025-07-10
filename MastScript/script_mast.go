@@ -43,7 +43,7 @@ func main() {
 		AddOp(txscript.OP_CHECKLOCKTIMEVERIFY).
 		AddOp(txscript.OP_DROP).
 		AddData(pk_U).
-		AddOp(txscript.OP_CHECKSIG)
+		AddOp(txscript.OP_CHECKSIGVERIFY)
 	redeem1, err := builder1.Script()
 	if err != nil {
 		log.Fatalf("failed: %v\n", err)
@@ -55,7 +55,7 @@ func main() {
 		AddData(pk_P).
 		AddOp(txscript.OP_CHECKSIGVERIFY).
 		AddData(pk_adapt).
-		AddOp(txscript.OP_CHECKSIG)
+		AddOp(txscript.OP_CHECKSIGVERIFY)
 	redeem2, err := builder2.Script()
 	if err != nil {
 		log.Fatalf("failed: %v\n", err)
