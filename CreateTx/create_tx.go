@@ -163,7 +163,7 @@ func main() {
 	*/
 
 	// U (do this later)
-	// sk_P, sk_adapt, redeem2, _ ,pkScriptDst := ParseParams(redeem1Hex, controlBlock1Hex, sk_U_WIF, " ", sendAddrStr)
+	// sk_P, sk_adapt, redeem1, _ ,pkScriptDst := ParseParams(redeem1Hex, controlBlock1Hex, sk_U_WIF, " ", sendAddrStr)
 
 	// P
 	sk_P, sk_adapt, redeem2, controlBlock2, prevTapAddr, pkScriptDst := ParseParams(redeem2Hex, controlBlock2Hex, sk_P_WIF, sk_adapt_WIF, prevPkScr, sendAddrStr)
