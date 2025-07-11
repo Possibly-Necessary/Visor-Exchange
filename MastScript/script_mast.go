@@ -81,7 +81,7 @@ func main() {
 	// Control block for redeem 2
 	// Control block 33 + 32m bytes (BIP-341 spec)
 	// where m is number of hashes in the Merkle path from leaf to the root / depth
-	// Two leaves, so the control block will have 33 bytes (heaber + intrKey)
+	// Two leaves, so the control block will have 33 bytes (header + intrKey)
 	// and 32 bytes (one sibling hash); so size of the control block of our tree = 33 + 32 × 1 = 65 bytes
 	leafHash2 := leaf2.TapHash()
 	leafIndex2 := tree.LeafProofIndex[leafHash2]
