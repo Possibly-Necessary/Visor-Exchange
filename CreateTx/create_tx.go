@@ -25,10 +25,10 @@ const (
 	sendAddrStr      = "bcrt1q7jsr7d6wsqvxsyc9vll2gq7v0uh7sn7h9z2kx6" // regtest address to receive funds
 	feeSat           = int64(200)
 
-	//for later (U's part)
-	//redeem1Hex = ""
-	//controlBlock1Hex = ""
-	//sk_U_WIF = ""
+	//U's part
+	redeem1Hex       = "5ab1752103a3f4c31f91193e5df06ebd0a8936c48ecbabd5cbabd8bf993b303cf32fbb4ef0ac"
+	controlBlock1Hex = "c1a3f4c31f91193e5df06ebd0a8936c48ecbabd5cbabd8bf993b303cf32fbb4ef016c5afd986099036b001ec964ab3dd3accb8f1faadc31837a8f6374dac3e986c"
+	sk_U_WIF         = "df4e18e055e9ba60226b5b0710d823784b2b9664ac3ed2da34334cd146bf2d83"
 )
 
 func ParseParams(redeemHex, controlBlockHex, skWIF, skAdaptWIF, tapAddrStr, sendAddrStr string) (*btcec.PrivateKey, *btcec.PrivateKey, []byte, []byte, []byte, []byte) {
@@ -162,8 +162,25 @@ func main() {
 		defer cli.Shutdown()
 	*/
 
-	// U (do this later)
-	// sk_P, _, redeem1, _, pkScriptDst := ParseParams(redeem1Hex, controlBlock1Hex, sk_U_WIF, " ", sendAddrStr)
+	// U
+	sk_U, _, redeem1, controlBlock1, prevTapAddr, pkScriptDst := ParseParams(redeem1Hex, controlBlock1Hex, sk_U_WIF, " ", prevPkScr, sendAddrStr)
+
+	txU, err := CreateTx(txId, vOut, prevAmtSats, feeSat, pkScriptDst)
+	if err != nil {
+		log.Fatalf("err: %v", err)
+	}
+
+	sig_U, err := SignTx(txU, 0, prevTapAddr, redeem1, prevAmtSats, sk_U)
+	if err != nil {
+		log.Fatalf("signing: %v", err)
+	}
+
+	txU.TxIn[0].Witness = wire.TxWitness{
+		sig_U,
+		redeem1,
+		controlBlock1,
+	}
+
 
 	// P
 	sk_P, sk_adapt, redeem2, controlBlock2, prevTapAddr, pkScriptDst := ParseParams(redeem2Hex, controlBlock2Hex, sk_P_WIF, sk_adapt_WIF, prevPkScr, sendAddrStr)
@@ -202,15 +219,30 @@ func main() {
 		controlBlock2,
 	}
 
+	// P
 	var buf bytes.Buffer
 	err = tx.Serialize(&buf)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
 
+	// U
+	var bufU bytes.Buffer
+	err = txU.Serialize(&bufU)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+
+
+	// P
 	rawHex := hex.EncodeToString(buf.Bytes())
 	log.Printf("Raw spend tx: %s\n", rawHex)
 	log.Printf("Transaction size: %d bytes", tx.SerializeSize())
+
+	// U
+	rawHexU := hex.EncodeToString(bufU.Bytes())
+	log.Printf("U's raw spend tx: %s\n", rawHexU)
+	log.Printf("Transaction size: %d bytes", txU.SerializeSize())
 
 }
 
