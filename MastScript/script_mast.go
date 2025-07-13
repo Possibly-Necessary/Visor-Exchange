@@ -23,6 +23,41 @@ func KeyGen() (*btcec.PrivateKey, []byte) {
 	return sk, pk
 }
 
+// tweak private key for P2TR key path spend
+// sk_Q = sk_U + hash(intrKey || merkleRoot) mod N
+func computeSkQ(sk_U *btcec.PrivateKey, pk_U *btcec.PublicKey, merkleRootHash []byte) *btcec.PrivateKey {
+
+	var (
+		skq   secp256k1.ModNScalar
+		tweak secp256k1.ModNScalar
+	)
+
+	// tweak = H(pk_U || merkleRoot)
+	pkBytes := pk_U.SerializeCompressed()
+	data := append(pkBytes, merkleRootHash...)
+	tweakBytes := sha256.Sum256(data)
+
+	overflow := tweak.SetByteSlice(tweakBytes[:])
+	if overflow {
+		panic("tweak overflow")
+	}
+
+	//tweakInt := new(big.Int).SetBytes(tweakBytes[:])
+	//curve := btcec.S256()
+	// tweak to sk_U modulo curve order
+	//skQint := new(big.Int).Add(sk_U.Key, tweakInt)
+	//skQint.Mod(skQint, curve.Params().N)
+
+	//sk_Q, _ := btcec.PrivKeyFromBytes(skQint.Bytes())
+
+	//skq.Set(sk_U.Key)
+	skq = sk_U.Key
+	skq.Add(&tweak) // skQ = sk_U + tweak mod N
+
+	sk_Q := btcec.PrivKeyFromScalar(&skq)
+	return sk_Q
+}
+
 func main() {
 
 	sk_U, pk_U := KeyGen()
@@ -103,8 +138,12 @@ func main() {
 		log.Fatalf("error in taproot addr: %v", err)
 	}
 
+	// For key-path spend
+	sk_Q := computeSkQ(sk_U, sk_U.PubKey(), merkleRootHash[:])
+
 	fmt.Printf("MAST Taproot contract address: %s\n", taprootAddr.EncodeAddress())
 	fmt.Printf("Merkle root size: %d bytes\n", len(merkleRootHash[:]))
+	fmt.Printf("sk_Q in hex: %x\n", sk_Q.Serialize())
 
 	fmt.Println()
 
