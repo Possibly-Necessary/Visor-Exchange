@@ -4,12 +4,14 @@ package main
 
 import (
 	"fmt"
+	"crypto/sha256"
 	"log"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/txscript"
+	"github.com/decred/dcrd/dcrec/secp256k1/v4" // added this, so go mod tidy
 	//"github.com/btcsuite/btcutil"
 )
 
