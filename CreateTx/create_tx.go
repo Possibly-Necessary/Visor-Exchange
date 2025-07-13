@@ -29,6 +29,7 @@ const (
 	redeem1Hex       = "5ab1752103a3f4c31f91193e5df06ebd0a8936c48ecbabd5cbabd8bf993b303cf32fbb4ef0ac"
 	controlBlock1Hex = "c1a3f4c31f91193e5df06ebd0a8936c48ecbabd5cbabd8bf993b303cf32fbb4ef016c5afd986099036b001ec964ab3dd3accb8f1faadc31837a8f6374dac3e986c"
 	sk_U_WIF         = "df4e18e055e9ba60226b5b0710d823784b2b9664ac3ed2da34334cd146bf2d83"
+	sk_QHex          = "2f4ffd174b82128d6b2555a411ac1f48c9ffead15faea7483b567c20d2e9face"
 )
 
 func ParseParams(redeemHex, controlBlockHex, skWIF, skAdaptWIF, tapAddrStr, sendAddrStr string) (*btcec.PrivateKey, *btcec.PrivateKey, []byte, []byte, []byte, []byte) {
@@ -219,20 +220,56 @@ func main() {
 		controlBlock2,
 	}
 
+		// Second case; using key-path spend for U's transaction
+	skQBytes, _ := hex.DecodeString(sk_QHex)
+	sk_Q, _ := btcec.PrivKeyFromBytes(skQBytes) //sk_Q --> tweaked private key
+
+	txKeyPath, err := CreateTx(txId, vOut, prevAmtSats, feeSat, pkScriptDst)
+	if err != nil {
+		log.Fatalf("err: %v", err)
+	}
+
+	// Sign the key-path spend Tx
+	sigHash := txscript.NewTxSigHashes(txKeyPath, txscript.NewCannedPrevOutputFetcher(prevTapAddr, prevAmtSats))
+
+	sig_Q, err := txscript.RawTxInTapscriptSignature(
+		txKeyPath,
+		sigHash,
+		0,
+		prevAmtSats,
+		prevTapAddr,
+		txscript.TapLeaf{},
+		txscript.SigHashDefault,
+		sk_Q,
+	)
+	if err != nil {
+		log.Fatalf("signing key-path: %v", err)
+	}
+	txKeyPath.TxIn[0].Witness = wire.TxWitness{sig_Q}
+
+	var (
+		buf        bytes.Buffer
+		bufU       bytes.Buffer
+		bufKeyPath bytes.Buffer
+	)
+
 	// P
-	var buf bytes.Buffer
 	err = tx.Serialize(&buf)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
 
 	// U
-	var bufU bytes.Buffer
 	err = txU.Serialize(&bufU)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
 
+	// U key-path spend
+	err = txKeyPath.Serialize(&bufKeyPath)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
 
 	// P
 	rawHex := hex.EncodeToString(buf.Bytes())
@@ -243,6 +280,11 @@ func main() {
 	rawHexU := hex.EncodeToString(bufU.Bytes())
 	log.Printf("U's raw spend tx: %s\n", rawHexU)
 	log.Printf("Transaction size: %d bytes", txU.SerializeSize())
+
+	// U key-path spend
+	rawHexKeyPath := hex.EncodeToString(bufKeyPath.Bytes())
+	log.Printf("U's key-path spend tx: %s\n", rawHexKeyPath)
+	log.Printf("Transaction size: %d bytes", txKeyPath.SerializeSize())
 
 }
 
